@@ -1,0 +1,50 @@
+rules:
+  - id: unparenthesized-subtract-add
+    patterns:
+      - pattern: $A - $B + $C
+      - pattern-not: $A - $B + 1
+      - metavariable-regex:
+          metavariable: $C
+          regex: ^(?!\d+[uUlL]*$)
+    message: >
+      '$A - $B + $C' parses as '($A - $B) + $C'. If '$A - ($B + $C)' was
+      intended, the result is too large by 2*$C. In a remaining-space or
+      length calculation this becomes a heap overflow (CVE-2026-39043 pattern).
+      Note: Semgrep ignores parentheses here, so an intentional '($A - $B) + $C'
+      also matches. The CodeQL query custom/unparenthesized-subtract-add does not.
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-783: Operator Precedence Logic Error"
+      category: security
+      references:
+        - https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/11248
+
+  - id: unchecked-mul-in-bounds-check
+    patterns:
+      - pattern-either:
+          - pattern: $S < $A + $N * $K
+          - pattern: $S <= $A + $N * $K
+          - pattern: $S < $N * $K
+          - pattern: $S <= $N * $K
+          - pattern: $A + $N * $K > $S
+          - pattern: $N * $K > $S
+      - pattern-not: $S < $A + $N * sizeof(...)
+      - pattern-not: $S < $N * sizeof(...)
+      - pattern-not: $S <= $A + $N * sizeof(...)
+      - pattern-not: $S <= $N * sizeof(...)
+      - metavariable-regex:
+          metavariable: $N
+          regex: ^(?!\d+[uUlL]*$)
+    message: >
+      Bounds check on '$S' uses an unchecked multiplication '$N * $K'. If the
+      product wraps in 32 bits, the check passes for a huge count and the
+      following loop reads past the buffer (CVE-2026-39044 pattern). Use a
+      checked multiply such as g_uint_checked_mul or __builtin_mul_overflow.
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-190: Integer Overflow or Wraparound"
+      category: security
+      references:
+        - https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/11247

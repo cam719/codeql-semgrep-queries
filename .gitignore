@@ -1,3 +1,6 @@
 # editor / OS cruft
 *.swp
 .DS_Store
+
+# CodeQL database built from tests/ (see README)
+tests/_db/
