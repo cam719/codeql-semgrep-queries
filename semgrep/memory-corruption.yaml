@@ -1,0 +1,63 @@
+rules:
+  - id: int-multiply-assigned-to-wide-type
+    patterns:
+      - pattern: $LHS = $A * $B;
+      - pattern-not: $LHS = (sf_count_t) $A * $B;
+      - pattern-not: $LHS = (int64_t) $A * $B;
+      - pattern-not: $LHS = (size_t) $A * $B;
+      - pattern-not: $LHS = (long long) $A * $B;
+      - pattern-not: $LHS = $A * (sf_count_t) $B;
+      - pattern-not: $LHS = $A * (int64_t) $B;
+      - pattern-not: $LHS = $A * (size_t) $B;
+    message: >
+      Multiplication of potentially 32-bit values assigned to wider type
+      without explicit widening cast. May overflow before assignment.
+      Check if operands are int/short and destination is 64-bit.
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: CWE-190
+      category: security
+
+  - id: frames-int-multiply
+    patterns:
+      - pattern-either:
+        - pattern: $PSF->sf.frames = $A * $B;
+        - pattern: $PSF->sf.frames = $A * $B / $C;
+      - pattern-not: $PSF->sf.frames = (sf_count_t) $A * $B;
+      - pattern-not: $PSF->sf.frames = (sf_count_t) $A * $B / $C;
+    message: >
+      psf->sf.frames assigned from multiplication without sf_count_t cast.
+      sf.frames is 64-bit but multiplication may overflow in 32-bit int.
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: CWE-190
+      category: security
+
+  - id: malloc-unchecked-arithmetic
+    patterns:
+      - pattern-either:
+        - pattern: malloc($A * $B)
+        - pattern: calloc(1, $A + $B * $C)
+        - pattern: calloc(1, $A * $B)
+      - pattern-not: malloc((size_t)$A * $B)
+      - pattern-not: malloc($A * (size_t)$B)
+    message: >
+      Allocation with arithmetic size expression that may overflow.
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: CWE-122
+      category: security
+
+  - id: memcpy-length-from-subtraction
+    patterns:
+      - pattern: memcpy($DST, $SRC, $END - $START);
+    message: >
+      memcpy with length from subtraction — verify bounds check exists.
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: CWE-122
+      category: security

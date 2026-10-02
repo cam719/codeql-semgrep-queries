@@ -1,0 +1,39 @@
+rules:
+  - id: hex-to-binary-unbounded
+    pattern-regex: "hex_to_binary\\s*\\([^,]+,\\s*strlen\\s*\\([^)]+\\)"
+    message: >
+      hex_to_binary called with strlen as length parameter — verify
+      destination buffer can hold strlen/2 bytes.
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-122
+
+  - id: data-type-conditional-bypass
+    pattern-regex: "if\\s*\\(\\w+->\\w*data_type\\w*\\s*>\\s*1\\)"
+    message: >
+      Bounds check gated by data_type > 1 — when data_type <= 1,
+      validation is skipped entirely.
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-787
+
+  - id: memcpy-from-token-unbounded
+    pattern-regex: "memcpy\\s*\\([^,]+,\\s*token\\.buf\\[\\d+\\],\\s*token\\.len\\[\\d+\\]\\)"
+    message: >
+      memcpy with length from parsed token without upper bound check.
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-122
+
+  - id: arr-2x-expansion-write
+    pattern-regex: "arr\\[pos\\s*\\*\\s*2"
+    message: >
+      2x index expansion write into buffer — verify length check
+      accounts for doubled output size.
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-787

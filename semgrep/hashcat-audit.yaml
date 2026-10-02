@@ -1,0 +1,88 @@
+rules:
+  - id: hex-decode-unbounded
+    patterns:
+      - pattern: hex_to_binary($SRC, strlen ($SRC), (char *) $DST);
+    message: >
+      hex_to_binary called with strlen(source) as length — no validation
+      that decoded output fits in destination buffer.
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: CWE-122
+      category: security
+
+  - id: hex-decode-unbounded-alt
+    patterns:
+      - pattern: hex_to_binary($SRC, strlen($SRC), $DST);
+    message: >
+      hex_to_binary called with strlen(source) as length — no validation
+      that decoded output fits in destination buffer.
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: CWE-122
+      category: security
+
+  - id: hex-decode-no-output-bounds
+    patterns:
+      - pattern: hex_to_binary(...);
+      - pattern-not-inside: |
+          if (strlen(...) > ...) { ... }
+          ...
+          hex_to_binary(...);
+    message: >
+      hex_to_binary called without prior length validation against
+      destination buffer size.
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: CWE-122
+      category: security
+
+  - id: conditional-bypass-bounds-check
+    patterns:
+      - pattern: |
+          if ($COND > 1) {
+            ...
+            if ($SIZE > ...) { return ...; }
+            ...
+          }
+    message: >
+      Bounds check is inside a conditional — code paths where condition
+      is false skip validation entirely.
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: CWE-787
+      category: security
+
+  - id: strtoul-to-array-index
+    patterns:
+      - pattern: |
+          $VAR = strtoul(...);
+          ...
+          $ARR[$VAR];
+    message: >
+      strtoul result used as array index without bounds check.
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: CWE-129
+      category: security
+
+  - id: stack-buffer-2x-expansion
+    patterns:
+      - pattern: |
+          $ARR[$I * 2 + ...] = ...;
+      - pattern-inside: |
+          static int $FUNC(char $BUF[RP_PASSWORD_SIZE], int $LEN) {
+            ...
+          }
+    message: >
+      2x expansion write (hex encoding) into fixed-size buffer.
+      Verify length check accounts for expansion factor.
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: CWE-787
+      category: security

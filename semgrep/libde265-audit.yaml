@@ -1,0 +1,49 @@
+rules:
+  - id: uvlc-no-range-check
+    pattern-regex: "(get_uvlc|get_svlc)\\(\\)"
+    paths:
+      include:
+        - "libde265/"
+    message: >
+      UVLC/SVLC value read from bitstream. Verify result is validated
+      before use as array index, size, or arithmetic operand.
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      cwe: CWE-190
+
+  - id: array-index-from-bitstream
+    pattern-regex: "\\[\\s*(\\w+)\\s*\\].*(?:get_uvlc|get_svlc|slice_segment_address|colBr|ctbAddr)"
+    paths:
+      include:
+        - "libde265/"
+    message: >
+      Array indexed by value potentially derived from bitstream without bounds check.
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-787
+
+  - id: width-height-multiply
+    pattern-regex: "(pic_width|pic_height|PicWidth|PicHeight|CtbsY|CtbsX)\\s*\\*\\s*(pic_width|pic_height|PicWidth|PicHeight|CtbsY|CtbsX|\\w+Size)"
+    paths:
+      include:
+        - "libde265/"
+    message: >
+      Multiplication of picture dimensions — check for integer overflow.
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      cwe: CWE-190
+
+  - id: ctb-addr-no-bounds
+    pattern-regex: "CtbAddr(RS|TS|InRS|InTS)to(TS|RS)\\s*\\["
+    paths:
+      include:
+        - "libde265/"
+    message: >
+      CTB address lookup table indexed — verify index is within allocated range.
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-125

@@ -1,0 +1,131 @@
+rules:
+  - id: python-dynamic-execution-sink
+    patterns:
+      - pattern-either:
+          - pattern: exec($CODE)
+          - pattern: exec($CODE, ...)
+          - pattern: eval($CODE)
+          - pattern: eval($CODE, ...)
+          - pattern: $OBJ = compile($SRC, $NAME, "exec")
+          - pattern: compile($SRC, $NAME, "exec")
+    message: >
+      Dynamic Python code execution sink. Treat as security-sensitive unless
+      every caller is authenticated, authorized, sandboxed, resource-limited,
+      and prevented from reaching secrets, filesystem, and network by default.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      cwe: CWE-94
+      category: security
+      audit_family: logic-rce
+
+  - id: fastapi-code-exec-route-missing-active-user
+    patterns:
+      - pattern-inside: |
+          @router.$METHOD($PATH, ...)
+          async def $FUNC(...):
+              ...
+      - pattern-either:
+          - pattern: validate_code($REQ.$FIELD)
+          - pattern: eval_function($REQ.$FIELD)
+          - pattern: execute_function($REQ.$FIELD, ...)
+          - pattern: create_function($REQ.$FIELD, ...)
+          - pattern: create_class($REQ.$FIELD, ...)
+      - pattern-not-inside: |
+          @router.$METHOD($PATH, ...)
+          async def $FUNC(..., $USER: CurrentActiveUser, ...):
+              ...
+      - pattern-not-inside: |
+          @router.$METHOD($PATH, ...)
+          async def $FUNC(..., $USER: Annotated[..., Depends(get_current_active_user)], ...):
+              ...
+    message: >
+      FastAPI route passes request-controlled data to a code-execution helper
+      without an obvious active-user dependency. Confirm authentication,
+      authorization, and sandboxing before treating this as reachable.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: CWE-306
+      category: security
+      audit_family: logic-rce
+
+  - id: python-import-from-user-controlled-ast
+    patterns:
+      - pattern-inside: |
+          for $NODE in $TREE.body:
+              ...
+      - pattern-either:
+          - pattern: importlib.import_module($ALIAS.name)
+          - pattern: __import__($ALIAS.name)
+    message: >
+      Dynamic import derived from parsed code. Import-time side effects can be
+      an execution primitive; verify the source is trusted and allowlisted.
+    languages: [python]
+    severity: WARNING
+    metadata:
+      cwe: CWE-94
+      category: security
+      audit_family: logic-rce
+
+  - id: tomcat-partial-put-path-derived-temp-file
+    patterns:
+      - pattern-either:
+          - pattern: new File($TEMPDIR, $PATH.replace('/', '.'))
+          - pattern: new File($TEMPDIR, $PATH.replace($SEP, $DOT))
+          - pattern: |
+              String $CONVERTED = $PATH.replace('/', '.');
+              ...
+              File $CONTENTFILE = new File($TEMPDIR, $CONVERTED);
+      - pattern-inside: |
+          protected File executePartialPut(...) {
+              ...
+          }
+    message: >
+      Partial PUT temporary file name is derived from the requested resource
+      path. This is a path-equivalence/file-write primitive; verify whether
+      attacker-controlled URLs can collide with sensitive temp/session files.
+    languages: [java]
+    severity: ERROR
+    metadata:
+      cwe: CWE-44
+      category: security
+      audit_family: logic-rce
+
+  - id: tomcat-file-store-session-deserialization
+    patterns:
+      - pattern-inside: |
+          public Session load(...) {
+              ...
+          }
+      - pattern-either:
+          - pattern: session.readObjectData($OIS)
+          - pattern: $SESSION.readObjectData($OIS)
+    message: >
+      File-backed session loading deserializes session data. This is an RCE
+      precondition when an attacker can write chosen .session files and a
+      gadget-bearing library is available.
+    languages: [java]
+    severity: WARNING
+    metadata:
+      cwe: CWE-502
+      category: security
+      audit_family: logic-rce
+
+  - id: java-session-attribute-readobject
+    patterns:
+      - pattern-inside: |
+          protected void doReadObject(ObjectInputStream $STREAM) {
+              ...
+          }
+      - pattern: $VALUE = $STREAM.readObject()
+    message: >
+      Session deserialization reads object attributes from an ObjectInputStream.
+      Treat as security-sensitive when session files or serialized streams can
+      be attacker-controlled.
+    languages: [java]
+    severity: WARNING
+    metadata:
+      cwe: CWE-502
+      category: security
+      audit_family: logic-rce

@@ -1,0 +1,65 @@
+rules:
+  - id: copy-size-sign-error
+    pattern-regex: "(memmove|memcpy|bcopy)\\s*\\([^,]+,[^,]+,\\s*[^)]*-[^)]*\\+[^)]*\\)"
+    message: >
+      Copy size expression mixes subtraction and addition. Verify operator
+      signs: wrong sign causes OOB by 2x operand (CVE-2026-7270 pattern).
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-787
+      category: security
+
+  - id: memmove-mixed-arithmetic-size
+    pattern-regex: "(memmove|memcpy|bcopy)\\s*\\([^,]+,[^,]+,\\s*\\w+\\s*[-+]\\s*\\w+\\s*[-+]\\s*\\w+"
+    message: >
+      Copy size has 3+ terms with mixed arithmetic. Each operator sign must
+      be verified against buffer layout. CVE-2026-7270 variant pattern.
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      cwe: CWE-787
+      category: security
+
+  - id: bcopy-into-begin-argv
+    pattern-regex: "bcopy\\s*\\([^,]+,\\s*imgp->args->begin_argv"
+    message: >
+      bcopy into begin_argv area — verify size does not exceed allocated space.
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      cwe: CWE-787
+      category: security
+
+  - id: copystr-stringspace-bounds
+    pattern-regex: "copystr\\s*\\([^,]+,[^,]+,\\s*[^,]*stringspace"
+    message: >
+      copystr bounded by stringspace — verify stringspace was correctly
+      decremented by prior operations.
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      cwe: CWE-787
+      category: security
+
+  - id: exec-offset-arithmetic
+    pattern-regex: "offset\\s*[+-]=\\s*.*\\+\\s*1"
+    message: >
+      Offset arithmetic with +1 adjustment. Verify the +1 accounts for
+      NUL terminator correctly and doesn't cause off-by-one.
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      cwe: CWE-193
+      category: security
+
+  - id: strlen-plus-one-mismatch
+    pattern-regex: "strlen\\s*\\([^)]+\\)\\s*(?!\\+\\s*1)[^;]*;"
+    message: >
+      strlen() result used without +1 for NUL terminator. If used as copy
+      size, this may truncate; if used as allocation size, may be off-by-one.
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      cwe: CWE-193
+      category: security

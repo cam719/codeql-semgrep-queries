@@ -1,0 +1,48 @@
+rules:
+  - id: unsigned-multiply-assign
+    pattern-regex: "\\w+\\s*\\*=\\s*\\d+"
+    message: >
+      Unsigned multiply-assign from constant. If the variable holds parsed
+      input, the product may wrap and bypass a subsequent range check.
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      cwe: CWE-190
+
+  - id: strlen-to-copy-function
+    pattern-regex: "(hex_to_binary|memcpy|memmove|strncpy)\\s*\\([^,]+,\\s*[^,]*strlen\\s*\\("
+    message: >
+      Copy function with strlen-derived length.
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-122
+
+  - id: alloc-multiply-parsed-fields
+    pattern-regex: "(malloc|setup_malloc|alloc)\\s*\\([^)]*\\*[^)]*\\*[^)]*\\)"
+    message: >
+      Allocation size computed from multiple multiplied values.
+      If any come from parsed input, overflow may produce undersized allocation.
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-190
+
+  - id: int-size-param-with-sizeof
+    pattern-regex: "setup_malloc\\s*\\(\\s*\\w+\\s*,\\s*sizeof"
+    message: >
+      setup_malloc takes int sz — sizeof product may overflow int on
+      large parsed values, truncating to small/negative allocation.
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-190
+
+  - id: assert-only-guard
+    pattern-regex: "assert\\s*\\([^)]+\\)\\s*;[^\\n]*\\n[^\\n]*\\["
+    message: >
+      Array access guarded only by assert (removed in release builds).
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: CWE-787
